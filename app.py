@@ -1,72 +1,47 @@
-import asyncio
-from datetime import datetime
-from typing import List
+from typing import Dict
 
-from fastapi import FastAPI, Depends, Query
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import FastAPI
+from fastapi.openapi.models import Response
 
-from asyncdb.db import SessionLocal
-from asyncdb.models import ProductModel
-from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
-from django_api.api import get_django_product_info
+from mongodb.db import get_products, create_product, update_product, delete_product, get_product, get_average_price, \
+    get_average_price_per_category
 
 app = FastAPI()
 
 
-async def get_db() -> AsyncSession:
-    async with SessionLocal() as session:
-        yield session
+@app.get("/products")
+def read_products_api(category: str = None, sort_by: str = None):
+    return get_products(category, sort_by)
 
 
-@app.get("/products",
+@app.post("/products")
+def create_product_api(product: Dict):
+    created_product = create_product(product)
+    print(created_product)
 
-         response_model=PaginatedProductResponse)
-async def read_products(
-        offset=Query(0),
-        limit=Query(10),
-        db: AsyncSession = Depends(get_db)
-):
-    products_models = await get_products(db, offset, limit)
-
-    count_query = select([func.count()]).select_from(ProductModel)
-    total = (await db.execute(count_query)).scalar()
-
-    products = [Product.from_orm(product) for product in products_models]
-
-    return PaginatedProductResponse(
-        results=products,
-        total=total,
-        offset=offset,
-        limit=limit
-    )
-
-    # start = datetime.now()
-    # django_products = await asyncio.gather(
-    #     *[get_django_product_info(product.name) for product in products]
-    # )
-    # end = datetime.now()
-    #
-    # print(f"Time taken: {(end - start)}")
-    #
-    # products_with_extra_data = []
-    # for product, django_product in zip(products, django_products):
-    #     products_with_extra_data.append(
-    #         ProductWithExtraData(
-    #             **product.dict(),
-    #             extra_data=django_product
-    #         )
-    #     )
-    #
-    # return products_with_extra_data
+    return created_product
 
 
-@app.post("/products", response_model=Product)
-async def create_product(product_payload: ProductPayload, db: AsyncSession = Depends(get_db)):
-    async with db as session:
-        db_product = ProductModel(**product_payload.dict())
-        session.add(db_product)
-        await session.commit()
-        await session.refresh(db_product)
-        return db_product
+@app.put("/products/{product_id}")
+def update_product_api(product_id: str, product: Dict):
+    return update_product(product_id, product)
+
+
+@app.delete("/products/{product_id}")
+def delete_product_api(product_id: str):
+    return delete_product(product_id)
+
+
+@app.get("/products/{product_id}")
+def read_product_api(product_id: str):
+    product = get_product(product_id)
+
+    if product:
+        return product
+    else:
+        return Response(status_code=404, content={"message": "Product not found"})
+
+
+@app.get("/average_price")
+def average_price_api():
+    return get_average_price_per_category()
