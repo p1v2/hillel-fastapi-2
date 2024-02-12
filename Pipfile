@@ -18,6 +18,7 @@ asyncmy = "*"
 sqlalchemy = "*"
 databases = "*"
 greenlet = "*"
+aiohttp = "*"
 
 [dev-packages]
 
