@@ -101,7 +101,7 @@ async def update_product(
 
 
 @app.patch("/products/{product_id}", response_model=Product)
-async def update_product(
+async def patch_product(
         product_id: int,
         product_update: ProductUpdate,
         db: AsyncSession = Depends(get_db)
