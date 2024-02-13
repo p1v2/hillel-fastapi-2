@@ -11,6 +11,11 @@ class ProductPayload(BaseModel):
     is_18_plus: Optional[bool] = False
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    is_18_plus: Optional[bool] = None
+
 class Product(ProductPayload):
     id: int
 
