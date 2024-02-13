@@ -87,10 +87,26 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
 @app.put("/products/{product_id}", response_model=Product)
 async def update_product(
         product_id: int,
+        product_payload: ProductPayload,
+        db: AsyncSession = Depends(get_db)
+        ):
+    updated = await queries.update_product(db, product_id, product_payload)
+
+    if not updated:
+        return Response(status_code=404)
+
+    return Product.from_orm(
+        await queries.search_product(db, product_id)
+    )
+
+
+@app.patch("/products/{product_id}", response_model=Product)
+async def update_product(
+        product_id: int,
         product_update: ProductUpdate,
         db: AsyncSession = Depends(get_db)
         ):
-    updated = await queries.update_product(db, product_id, product_update)
+    updated = await queries.partial_update_product(db, product_id, product_update)
 
     if not updated:
         return Response(status_code=404)
