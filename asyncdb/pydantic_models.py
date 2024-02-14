@@ -19,6 +19,12 @@ class Product(ProductPayload):
         from_attributes = True
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    is_18_plus: Optional[bool] = None
+
+
 class ProductWithExtraData(Product):
     extra_data: Optional[DjangoProduct]
 
