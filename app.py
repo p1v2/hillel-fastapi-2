@@ -1,15 +1,14 @@
-import asyncio
-from datetime import datetime
-from typing import List
-
-from fastapi import FastAPI, Depends, Query
+import queries
+from fastapi import FastAPI, Depends, Query, HTTPException
+from rest_framework.response import Response
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from asyncdb.db import SessionLocal
 from asyncdb.models import ProductModel
-from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
+from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse, \
+    ProductUpdate
+from asyncdb.queries import get_products, search_product, delete_product
 from django_api.api import get_django_product_info
 
 app = FastAPI()
@@ -70,3 +69,34 @@ async def create_product(product_payload: ProductPayload, db: AsyncSession = Dep
         await session.commit()
         await session.refresh(db_product)
         return db_product
+
+
+# PUT Endpoint: Update an existing product by ID
+@app.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: int, product_payload: ProductPayload, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        db_product = await db.execute(select(ProductModel).filter(ProductModel.id == product_id))
+        db_product = db_product.scalars().first()
+
+        if db_product is None:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        for key, value in product_payload.dict().items():
+            setattr(db_product, key, value)
+        await db.commit()
+        await db.refresh(db_product)
+
+
+@app.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    product_model = await queries.search_product(db, product_id)
+
+    if not product_model:
+        return Response(status_code=404)
+    return Product.from_orm(product_model)
+
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    updated = await queries.delete_product(db, product_id)
+    return Response(status_code=(204 if updated else 404))
