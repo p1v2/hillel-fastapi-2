@@ -83,7 +83,6 @@ async def update_product(product_id: int, product_payload: ProductPayload, db: A
 
         for key, value in product_payload.dict().items():
             setattr(db_product, key, value)
-        print("update_product")
         await db.commit()
         await db.refresh(db_product)
 
@@ -94,15 +93,10 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
 
     if not product_model:
         return Response(status_code=404)
-    print("get_product")
     return Product.from_orm(product_model)
 
 
 @app.delete("/products/{product_id}")
 async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
     updated = await queries.delete_product(db, product_id)
-
-    if not updated:
-        return Response(status_code=404)
-    print("delete_product")
-    return Response(status_code=204)
+    return Response(status_code=(204 if updated else 404))
