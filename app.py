@@ -2,8 +2,8 @@ import asyncio
 from datetime import datetime
 from typing import List
 
-from fastapi import FastAPI, Depends, Query
-from sqlalchemy import select, func
+from fastapi import FastAPI, Depends, Query, Response, HTTPException, status
+from sqlalchemy import select, delete, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from asyncdb.db import SessionLocal
@@ -70,3 +70,38 @@ async def create_product(product_payload: ProductPayload, db: AsyncSession = Dep
         await session.commit()
         await session.refresh(db_product)
         return db_product
+
+
+@app.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        result = await db.execute(select(ProductModel).filter_by(id=product_id))
+        db_product = result.scalars().first()
+        if db_product is None:
+            raise HTTPException(status_code=404, detail="Product not found")
+            
+        return Product.from_orm(db_product)
+
+
+@app.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: int, product_payload: ProductPayload, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        update_stmt = update(ProductModel).where(ProductModel.id == product_id).values(**product_payload.dict())
+        result = await db.execute(update_stmt)
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        await db.commit()
+
+        return Product(id=product_id, **product_payload.dict())
+
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        db_product = delete(ProductModel).where(ProductModel.id == product_id)
+        result = await db.execute(db_product)
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        await db.commit()
+        
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
