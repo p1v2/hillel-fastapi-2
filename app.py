@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import List
 
-from fastapi import FastAPI, Depends, Query, HTTPException
+from fastapi import FastAPI, Depends, Query, Response, HTTPException, status
 from sqlalchemy import select, delete, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,6 +79,7 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
         db_product = result.scalars().first()
         if db_product is None:
             raise HTTPException(status_code=404, detail="Product not found")
+            
         return Product.from_orm(db_product)
 
 
@@ -102,5 +103,5 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Product not found")
         await db.commit()
-        response.status_code = 204
-
+        
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
