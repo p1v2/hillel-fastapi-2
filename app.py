@@ -102,6 +102,5 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Product not found")
         await db.commit()
-        return {"message": "Product deleted successfully"}
-
+        response.status_code = 204
 
