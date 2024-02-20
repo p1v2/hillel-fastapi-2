@@ -107,8 +107,13 @@ async def update_product(product:Product, db: AsyncSession = Depends(get_db)):
 
 
 
-@app.delete('/products')
-async def delete_product(product:Product, db: AsyncSession = Depends(get_db)):
+@app.delete('/products/{product_id}')
+async def delete_product(product_id:int, db: AsyncSession = Depends(get_db)):
     async with db as session:
-        await session.delete()
-        return
+        product_ob = await session.get(ProductModel, product_id)
+        if product_ob:
+            await session.delete(product_ob)
+            await session.commit()
+            return Product(id=0, name="Product deleted", price=0)
+        else:
+            return Product(id=-1, name="Does not exist", price=0)
