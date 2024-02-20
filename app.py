@@ -2,14 +2,16 @@ import asyncio
 from datetime import datetime
 from typing import List
 
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from asyncdb import queries
 from asyncdb.db import SessionLocal
 from asyncdb.models import ProductModel
 from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
+from asyncdb.queries import get_products, delete_product
+from syncdb.models import ProductPayload
 from django_api.api import get_django_product_info
 
 app = FastAPI()
@@ -70,3 +72,37 @@ async def create_product(product_payload: ProductPayload, db: AsyncSession = Dep
         await session.commit()
         await session.refresh(db_product)
         return db_product
+
+
+@app.get("/products/{id}", response_model=Product)
+async def get_product(id: int, db:AsyncSession = Depends(get_db)):
+    product_by_id = await queries.get_product_by_id(db, id)
+
+    if not product_by_id:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return Product.from_orm(product_by_id)
+
+
+@app.put("/products/{product_id}", response_model=Product)
+async def update_product(
+        product_id: int,
+        product_payload: ProductPayload,
+        db: AsyncSession = Depends(get_db)
+):
+    updated_row = await queries.update_product(db, product_id, product_payload)
+
+    if not updated_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    return await queries.get_product_by_id(db, product_id)
+
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    deleted = await queries.delete_product(db, product_id)
+
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    return {"message": "Product successfully deleted"}
