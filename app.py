@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import List
 
 from fastapi import FastAPI, Depends, Query
+from fastapi.openapi.models import Response
+
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,7 +105,7 @@ async def update_product(product:Product, db: AsyncSession = Depends(get_db)):
             await session.refresh(product_ob)
             return product_ob
         else:
-            return Product(id=-1, name="Does not exist", price=0)
+            return Response(status_code=404, description="Product with such id does not exist")
 
 
 
@@ -114,6 +116,6 @@ async def delete_product(product_id:int, db: AsyncSession = Depends(get_db)):
         if product_ob:
             await session.delete(product_ob)
             await session.commit()
-            return Product(id=0, name="Product deleted", price=0)
+            return Response(status_code=204, description=f"Product {product_id} deleted")
         else:
-            return Product(id=-1, name="Does not exist", price=0)
+            return Response(status_code=404, description="Product with such id does not exist")
