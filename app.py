@@ -2,14 +2,14 @@ import asyncio
 from datetime import datetime
 from typing import List
 
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from asyncdb.db import SessionLocal
 from asyncdb.models import ProductModel
 from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
+from asyncdb.queries import get_products,product_by_id
 from django_api.api import get_django_product_info
 
 app = FastAPI()
@@ -70,3 +70,40 @@ async def create_product(product_payload: ProductPayload, db: AsyncSession = Dep
         await session.commit()
         await session.refresh(db_product)
         return db_product
+
+
+@app.get("/products/{product_id}")
+async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    product = await product_by_id(db, product_id)
+    if product:
+        return product
+    else:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    async with db as session:
+        product = await product_by_id(db, product_id)
+        if product:
+            await session.delete(product)
+            await session.commit()
+            return {"message": "Product deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+
+@app.put("/products/{product_id}")
+async def update_product(product_id: int, new_product_data: dict, db: AsyncSession = Depends(get_db)):
+    async with db as session:
+        product = await product_by_id(db, product_id)
+        if product:
+            for key, value in new_product_data.items():
+                setattr(product, key, value)
+
+            session.add(product)
+            await session.commit()
+            await session.refresh(product)
+            return {"message": "Product updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Product not found")
