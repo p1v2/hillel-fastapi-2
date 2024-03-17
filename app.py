@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from asyncdb.db import SessionLocal
 from asyncdb.models import ProductModel
 from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
+from asyncdb.queries import get_products, get_product_by_id, update_product_by_id, delete_product_by_id
 from django_api.api import get_django_product_info
 
 app = FastAPI()
