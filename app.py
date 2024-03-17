@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from asyncdb.db import SessionLocal
 from asyncdb.models import ProductModel
 from asyncdb.pydantic_models import Product, ProductPayload, ProductWithExtraData, PaginatedProductResponse
-from asyncdb.queries import get_products
+from asyncdb.queries import get_products, get_product_by_id, update_product_by_id, delete_product_by_id
 from django_api.api import get_django_product_info
 
 app = FastAPI()
@@ -70,3 +70,25 @@ async def create_product(product_payload: ProductPayload, db: AsyncSession = Dep
         await session.commit()
         await session.refresh(db_product)
         return db_product
+
+
+
+@app.get("/products/{product_id}")
+async def read_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    product = await get_product_by_id(product_id, db)
+    return product
+
+@app.put("/products/{product_id}")
+async def update_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    await get_product_by_id(product_id, db)
+
+    await update_product_by_id(product_id, db)
+    return {"message": "Product updated successfully"}
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+    await get_product_by_id(product_id, db)
+
+    await delete_product_by_id(product_id, db)
+    return {"message": "Product deleted successfully"}
+
